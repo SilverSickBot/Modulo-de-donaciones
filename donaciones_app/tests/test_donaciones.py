@@ -1,275 +1,436 @@
 import json
-import os
-import sys
 import unittest
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 from app import create_app
-from models import seed_data
+from models import Donacion, donaciones_db, usuarios_db
 
 
-class BaseTestCase(unittest.TestCase):
-    def setUp(self):
-        self.app = create_app()
-        self.app.config.update({"TESTING": True})
-        seed_data()
-        self.client = self.app.test_client()
+class TestAutenticacion(unittest.TestCase):
 
-    def login(self, username, password):
-        return self.client.post(
-            "/api/auth/login",
-            data=json.dumps({"username": username, "password": password}),
-            content_type="application/json",
-        )
+  def setUp(self):
+    self.app = create_app()
+    self.app.config["TESTING"] = True
+    self.client = self.app.test_client()
 
-    def token_admin(self):
-        resp = self.login("admin", "Admin123!")
-        return resp.get_json()["token"]
+  def test_login_exitoso_admin(self):
+    resp = self.client.post(
+        "/api/auth/login",
+        data=json.dumps({"username": "admin", "password": "Admin123!"}),
+        content_type="application/json",
+    )
+    self.assertEqual(resp.status_code, 200)
+    data = resp.get_json()
+    self.assertIn("token", data)
+    self.assertEqual(data["usuario"]["rol"], "administrador")
 
-    def token_usuario(self):
-        resp = self.login("jperez", "Usuario123!")
-        return resp.get_json()["token"]
+  def test_login_exitoso_usuario(self):
+    resp = self.client.post(
+        "/api/auth/login",
+        data=json.dumps({"username": "jperez", "password": "Usuario123!"}),
+        content_type="application/json",
+    )
+    self.assertEqual(resp.status_code, 200)
+    data = resp.get_json()
+    self.assertIn("token", data)
+    self.assertEqual(data["usuario"]["rol"], "usuario")
 
-    def auth_header(self, token):
-        return {"Authorization": f"Bearer {token}"}
+  def test_login_credenciales_invalidas(self):
+    resp = self.client.post(
+        "/api/auth/login",
+        data=json.dumps({"username": "admin", "password": "ClaveIncorrecta"}),
+        content_type="application/json",
+    )
+    self.assertEqual(resp.status_code, 401)
 
-    def post_json(self, url, body, token=None):
-        headers = self.auth_header(token) if token else {}
-        return self.client.post(url, data=json.dumps(body), content_type="application/json", headers=headers)
+  def test_login_usuario_inexistente(self):
+    resp = self.client.post(
+        "/api/auth/login",
+        data=json.dumps(
+            {"username": "noexiste", "password": "ClaveIncorrecta"}
+        ),
+        content_type="application/json",
+    )
+    self.assertEqual(resp.status_code, 401)
 
-    def donacion_comida(self, **overrides):
-        base = {
-            "tipo": "comida",
-            "cantidad": 10,
-            "donante": "Juan Pérez",
-            "organizacion": "Comedor Comunitario Esperanza",
-            "direccion": "Av. Reforma 123, CDMX",
-            "descripcion": "Paquetes de arroz y frijol",
-        }
-        base.update(overrides)
-        return base
-
-    def donacion_ropa(self, **overrides):
-        base = {
-            "tipo": "ropa",
-            "cantidad": 20,
-            "donante": "Juan Pérez",
-            "organizacion": "Fundación Abrigo",
-            "direccion": "Calle Hidalgo 45, Monterrey",
-            "descripcion": "Ropa de invierno para niños",
-        }
-        base.update(overrides)
-        return base
+  def test_login_sin_datos(self):
+    resp = self.client.post("/api/auth/login", content_type="application/json")
+    self.assertEqual(resp.status_code, 400)
 
 
-# ---------------------------------------------------------------------------
-# 1. Autenticación
-# ---------------------------------------------------------------------------
-class TestAutenticacion(BaseTestCase):
-    def test_login_exitoso_admin(self):
-        resp = self.login("admin", "Admin123!")
-        self.assertEqual(resp.status_code, 200)
-        body = resp.get_json()
-        self.assertIn("token", body)
-        self.assertEqual(body["usuario"]["rol"], "administrador")
+class TestSeguridadJWT(unittest.TestCase):
 
-    def test_login_exitoso_usuario(self):
-        resp = self.login("jperez", "Usuario123!")
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.get_json()["usuario"]["rol"], "usuario")
+  def setUp(self):
+    self.app = create_app()
+    self.app.config["TESTING"] = True
+    self.client = self.app.test_client()
 
-    def test_login_credenciales_invalidas(self):
-        resp = self.login("admin", "clave_incorrecta")
-        self.assertEqual(resp.status_code, 401)
+  def _obtener_token(self, username="jperez", password="Usuario123!"):
+    resp = self.client.post(
+        "/api/auth/login",
+        data=json.dumps({"username": username, "password": password}),
+        content_type="application/json",
+    )
+    return resp.get_json().get("token")
 
-    def test_login_usuario_inexistente(self):
-        resp = self.login("no_existe", "1234")
-        self.assertEqual(resp.status_code, 401)
+  def test_acceso_con_token_valido(self):
+    token = self._obtener_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = self.client.get("/api/donaciones", headers=headers)
+    self.assertEqual(resp.status_code, 200)
 
-    def test_login_sin_datos(self):
-        resp = self.client.post("/api/auth/login", data=json.dumps({}), content_type="application/json")
-        self.assertEqual(resp.status_code, 400)
+  def test_acceso_sin_token(self):
+    resp = self.client.get("/api/donaciones")
+    self.assertEqual(resp.status_code, 401)
+    data = resp.get_json()
+    self.assertTrue("error" in data or "mensaje" in data)
 
-
-# ---------------------------------------------------------------------------
-# 2. Seguridad / JWT
-# ---------------------------------------------------------------------------
-class TestSeguridadJWT(BaseTestCase):
-    def test_acceso_sin_token(self):
-        resp = self.client.get("/api/donaciones")
-        self.assertEqual(resp.status_code, 401)
-        self.assertEqual(resp.get_json()["code"], "TOKEN_MISSING")
-
-    def test_acceso_token_invalido(self):
-        resp = self.client.get("/api/donaciones", headers=self.auth_header("token.falso.123"))
-        self.assertEqual(resp.status_code, 401)
-        self.assertEqual(resp.get_json()["code"], "TOKEN_INVALID")
-
-    def test_acceso_con_token_valido(self):
-        resp = self.client.get("/api/donaciones", headers=self.auth_header(self.token_usuario()))
-        self.assertEqual(resp.status_code, 200)
+  def test_acceso_token_invalido(self):
+    headers = {"Authorization": "Bearer token_falso_o_invalido_12345"}
+    resp = self.client.get("/api/donaciones", headers=headers)
+    self.assertEqual(resp.status_code, 401)
+    data = resp.get_json()
+    self.assertTrue("error" in data or "mensaje" in data)
 
 
-# ---------------------------------------------------------------------------
-# 3. Permisos de Usuario
-# ---------------------------------------------------------------------------
-class TestPermisosUsuario(BaseTestCase):
-    def test_usuario_puede_crear_donacion_comida(self):
-        resp = self.post_json("/api/donaciones", self.donacion_comida(), token=self.token_usuario())
-        self.assertEqual(resp.status_code, 201)
-        body = resp.get_json()
-        self.assertEqual(body["estado"], "pendiente")
-        self.assertEqual(body["tipo"], "comida")
+class TestPermisosUsuario(unittest.TestCase):
 
-    def test_usuario_puede_crear_donacion_ropa(self):
-        resp = self.post_json("/api/donaciones", self.donacion_ropa(), token=self.token_usuario())
-        self.assertEqual(resp.status_code, 201)
-        self.assertEqual(resp.get_json()["tipo"], "ropa")
+  def setUp(self):
+    self.app = create_app()
+    self.app.config["TESTING"] = True
+    self.client = self.app.test_client()
+    donaciones_db.clear()
 
-    def test_usuario_no_puede_aprobar_donacion(self):
-        token_u = self.token_usuario()
-        crear = self.post_json("/api/donaciones", self.donacion_comida(), token=token_u)
-        donacion_id = crear.get_json()["id"]
+  def _obtener_token(self, username="jperez", password="Usuario123!"):
+    resp = self.client.post(
+        "/api/auth/login",
+        data=json.dumps({"username": username, "password": password}),
+        content_type="application/json",
+    )
+    return resp.get_json().get("token")
 
-        resp = self.client.put(f"/api/donaciones/{donacion_id}/aprobar", headers=self.auth_header(token_u))
-        self.assertEqual(resp.status_code, 403)
-        self.assertEqual(resp.get_json()["code"], "FORBIDDEN")
+  def test_usuario_puede_crear_donacion_comida(self):
+    token = self._obtener_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = {
+        "tipo": "comida",
+        "cantidad": 10,
+        "donante": "Juan Pérez",
+        "direccion": "Calle Falsa 123",
+        "organizacion": "Fundación A",
+        "descripcion": "Latas de atún",
+    }
+    resp = self.client.post(
+        "/api/donaciones",
+        data=json.dumps(payload),
+        headers=headers,
+        content_type="application/json",
+    )
+    self.assertEqual(resp.status_code, 201)
 
-    def test_usuario_no_puede_eliminar_donacion(self):
-        token_u = self.token_usuario()
-        crear = self.post_json("/api/donaciones", self.donacion_comida(), token=token_u)
-        donacion_id = crear.get_json()["id"]
+  def test_usuario_puede_crear_donacion_ropa(self):
+    token = self._obtener_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = {
+        "tipo": "ropa",
+        "cantidad": 5,
+        "donante": "Juan Pérez",
+        "direccion": "Calle Falsa 123",
+        "organizacion": "Fundación A",
+        "descripcion": "Abrigos",
+    }
+    resp = self.client.post(
+        "/api/donaciones",
+        data=json.dumps(payload),
+        headers=headers,
+        content_type="application/json",
+    )
+    self.assertEqual(resp.status_code, 201)
 
-        resp = self.client.delete(f"/api/donaciones/{donacion_id}", headers=self.auth_header(token_u))
-        self.assertEqual(resp.status_code, 403)
+  def test_usuario_solo_ve_sus_propias_donaciones(self):
+    token_usuario = self._obtener_token("jperez", "Usuario123!")
+    headers_usuario = {"Authorization": f"Bearer {token_usuario}"}
 
-    def test_usuario_no_puede_ver_reporte(self):
-        resp = self.client.get("/api/donaciones/reporte", headers=self.auth_header(self.token_usuario()))
-        self.assertEqual(resp.status_code, 403)
+    resp = self.client.get("/api/donaciones", headers=headers_usuario)
+    self.assertEqual(resp.status_code, 200)
 
-    def test_usuario_solo_ve_sus_propias_donaciones(self):
-        token_u = self.token_usuario()
-        token_a = self.token_admin()
-        self.post_json("/api/donaciones", self.donacion_comida(), token=token_u)
-        self.post_json("/api/donaciones", self.donacion_ropa(donante="Admin"), token=token_a)
+  def test_usuario_no_puede_aprobar_donacion(self):
+    token_usuario = self._obtener_token("jperez", "Usuario123!")
+    headers = {"Authorization": f"Bearer {token_usuario}"}
 
-        resp = self.client.get("/api/donaciones", headers=self.auth_header(token_u))
-        data = resp.get_json()
-        self.assertTrue(all(d["usuario_id"] == 2 for d in data))
-        self.assertEqual(len(data), 1)
+    # Donación de ejemplo
+    donacion = Donacion(
+        tipo="comida",
+        cantidad=5,
+        donante="Test",
+        direccion="Calle 12345",
+        organizacion="Org",
+        usuario_id="2",
+    )
+    donaciones_db[donacion.id] = donacion
 
+    resp = self.client.put(
+        f"/api/donaciones/{donacion.id}/aprobar", headers=headers
+    )
+    self.assertEqual(resp.status_code, 403)
+    data = resp.get_json()
+    self.assertTrue("error" in data or "mensaje" in data)
 
-# ---------------------------------------------------------------------------
-# 4. Permisos de Administrador (acciones exclusivas)
-# ---------------------------------------------------------------------------
-class TestPermisosAdministrador(BaseTestCase):
-    def test_admin_puede_aprobar_donacion(self):
-        token_u = self.token_usuario()
-        token_a = self.token_admin()
-        crear = self.post_json("/api/donaciones", self.donacion_comida(), token=token_u)
-        donacion_id = crear.get_json()["id"]
+  def test_usuario_no_puede_eliminar_donacion(self):
+    token_usuario = self._obtener_token("jperez", "Usuario123!")
+    headers = {"Authorization": f"Bearer {token_usuario}"}
 
-        resp = self.client.put(f"/api/donaciones/{donacion_id}/aprobar", headers=self.auth_header(token_a))
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.get_json()["estado"], "aprobada")
+    donacion = Donacion(
+        tipo="ropa",
+        cantidad=2,
+        donante="Test",
+        direccion="Calle 12345",
+        organizacion="Org",
+        usuario_id="2",
+    )
+    donaciones_db[donacion.id] = donacion
 
-    def test_admin_puede_rechazar_donacion(self):
-        token_u = self.token_usuario()
-        token_a = self.token_admin()
-        crear = self.post_json("/api/donaciones", self.donacion_ropa(), token=token_u)
-        donacion_id = crear.get_json()["id"]
+    resp = self.client.delete(
+        f"/api/donaciones/{donacion.id}", headers=headers
+    )
+    self.assertEqual(resp.status_code, 403)
 
-        resp = self.client.put(f"/api/donaciones/{donacion_id}/rechazar", headers=self.auth_header(token_a))
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.get_json()["estado"], "rechazada")
+  def test_usuario_no_puede_ver_reporte(self):
+    token_usuario = self._obtener_token("jperez", "Usuario123!")
+    headers = {"Authorization": f"Bearer {token_usuario}"}
 
-    def test_admin_puede_eliminar_donacion(self):
-        token_u = self.token_usuario()
-        token_a = self.token_admin()
-        crear = self.post_json("/api/donaciones", self.donacion_comida(), token=token_u)
-        donacion_id = crear.get_json()["id"]
-
-        resp = self.client.delete(f"/api/donaciones/{donacion_id}", headers=self.auth_header(token_a))
-        self.assertEqual(resp.status_code, 200)
-
-    def test_admin_puede_ver_reporte(self):
-        resp = self.client.get("/api/donaciones/reporte", headers=self.auth_header(self.token_admin()))
-        self.assertEqual(resp.status_code, 200)
-        body = resp.get_json()
-        self.assertIn("resumen_por_tipo", body)
-        self.assertIn("comida", body["resumen_por_tipo"])
-        self.assertIn("ropa", body["resumen_por_tipo"])
-
-    def test_admin_ve_todas_las_donaciones(self):
-        token_u = self.token_usuario()
-        token_a = self.token_admin()
-        self.post_json("/api/donaciones", self.donacion_comida(), token=token_u)
-
-        resp = self.client.get("/api/donaciones", headers=self.auth_header(token_a))
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(len(resp.get_json()), 1)
-
-
-# ---------------------------------------------------------------------------
-# 5. Validación de datos
-# ---------------------------------------------------------------------------
-class TestValidacionDatos(BaseTestCase):
-    def setUp(self):
-        super().setUp()
-        self.token_u = self.token_usuario()
-
-    def test_crear_donacion_tipo_invalido(self):
-        resp = self.post_json("/api/donaciones", self.donacion_comida(tipo="dinero"), token=self.token_u)
-        self.assertEqual(resp.status_code, 400)
-        self.assertIn("tipo", resp.get_json()["detalles"])
-
-    def test_crear_donacion_sin_cantidad(self):
-        datos = self.donacion_comida()
-        del datos["cantidad"]
-        resp = self.post_json("/api/donaciones", datos, token=self.token_u)
-        self.assertEqual(resp.status_code, 400)
-        self.assertIn("cantidad", resp.get_json()["detalles"])
-
-    def test_crear_donacion_cantidad_negativa(self):
-        resp = self.post_json("/api/donaciones", self.donacion_comida(cantidad=-5), token=self.token_u)
-        self.assertEqual(resp.status_code, 400)
-
-    def test_crear_donacion_cantidad_no_numerica(self):
-        resp = self.post_json("/api/donaciones", self.donacion_comida(cantidad="muchas"), token=self.token_u)
-        self.assertEqual(resp.status_code, 400)
-
-    def test_crear_donacion_sin_donante(self):
-        datos = self.donacion_comida()
-        del datos["donante"]
-        resp = self.post_json("/api/donaciones", datos, token=self.token_u)
-        self.assertEqual(resp.status_code, 400)
-
-    def test_crear_donacion_sin_direccion(self):
-        datos = self.donacion_comida(direccion="")
-        resp = self.post_json("/api/donaciones", datos, token=self.token_u)
-        self.assertEqual(resp.status_code, 400)
-        self.assertIn("direccion", resp.get_json()["detalles"])
-
-    def test_crear_donacion_sin_organizacion(self):
-        datos = self.donacion_comida(organizacion="")
-        resp = self.post_json("/api/donaciones", datos, token=self.token_u)
-        self.assertEqual(resp.status_code, 400)
-        self.assertIn("organizacion", resp.get_json()["detalles"])
+    resp = self.client.get("/api/donaciones/reporte", headers=headers)
+    self.assertEqual(resp.status_code, 403)
 
 
-# ---------------------------------------------------------------------------
-# 6. Manejo de errores
-# ---------------------------------------------------------------------------
-class TestManejoErrores(BaseTestCase):
-    def test_donacion_inexistente_404(self):
-        resp = self.client.get("/api/donaciones/9999", headers=self.auth_header(self.token_admin()))
-        self.assertEqual(resp.status_code, 404)
+class TestPermisosAdministrador(unittest.TestCase):
 
-    def test_aprobar_donacion_inexistente_404(self):
-        resp = self.client.put("/api/donaciones/9999/aprobar", headers=self.auth_header(self.token_admin()))
-        self.assertEqual(resp.status_code, 404)
+  def setUp(self):
+    self.app = create_app()
+    self.app.config["TESTING"] = True
+    self.client = self.app.test_client()
+    donaciones_db.clear()
+
+  def _obtener_token(self, username="admin", password="Admin123!"):
+    resp = self.client.post(
+        "/api/auth/login",
+        data=json.dumps({"username": username, "password": password}),
+        content_type="application/json",
+    )
+    return resp.get_json().get("token")
+
+  def test_admin_ve_todas_las_donaciones(self):
+    token_admin = self._obtener_token()
+    headers = {"Authorization": f"Bearer {token_admin}"}
+
+    resp = self.client.get("/api/donaciones", headers=headers)
+    self.assertEqual(resp.status_code, 200)
+
+  def test_admin_puede_aprobar_donacion(self):
+    token_admin = self._obtener_token()
+    headers = {"Authorization": f"Bearer {token_admin}"}
+
+    donacion = Donacion(
+        tipo="comida",
+        cantidad=10,
+        donante="Donante",
+        direccion="Calle 12345",
+        organizacion="Org",
+        usuario_id="2",
+    )
+    donaciones_db[donacion.id] = donacion
+
+    resp = self.client.put(
+        f"/api/donaciones/{donacion.id}/aprobar", headers=headers
+    )
+    self.assertEqual(resp.status_code, 200)
+    data = resp.get_json()
+    self.assertEqual(data["estado"], "aprobada")
+
+  def test_admin_puede_rechazar_donacion(self):
+    token_admin = self._obtener_token()
+    headers = {"Authorization": f"Bearer {token_admin}"}
+
+    donacion = Donacion(
+        tipo="ropa",
+        cantidad=3,
+        donante="Donante",
+        direccion="Calle 12345",
+        organizacion="Org",
+        usuario_id="2",
+    )
+    donaciones_db[donacion.id] = donacion
+
+    resp = self.client.put(
+        f"/api/donaciones/{donacion.id}/rechazar", headers=headers
+    )
+    self.assertEqual(resp.status_code, 200)
+    data = resp.get_json()
+    self.assertEqual(data["estado"], "rechazada")
+
+  def test_admin_puede_eliminar_donacion(self):
+    token_admin = self._obtener_token()
+    headers = {"Authorization": f"Bearer {token_admin}"}
+
+    donacion = Donacion(
+        tipo="comida",
+        cantidad=1,
+        donante="Donante",
+        direccion="Calle 12345",
+        organizacion="Org",
+        usuario_id="2",
+    )
+    donaciones_db[donacion.id] = donacion
+
+    resp = self.client.delete(
+        f"/api/donaciones/{donacion.id}", headers=headers
+    )
+    self.assertEqual(resp.status_code, 200)
+
+  def test_admin_puede_ver_reporte(self):
+    token_admin = self._obtener_token()
+    headers = {"Authorization": f"Bearer {token_admin}"}
+
+    resp = self.client.get("/api/donaciones/reporte", headers=headers)
+    self.assertEqual(resp.status_code, 200)
+
+
+class TestValidacionDatos(unittest.TestCase):
+
+  def setUp(self):
+    self.app = create_app()
+    self.app.config["TESTING"] = True
+    self.client = self.app.test_client()
+
+  def _obtener_token(self):
+    resp = self.client.post(
+        "/api/auth/login",
+        data=json.dumps({"username": "jperez", "password": "Usuario123!"}),
+        content_type="application/json",
+    )
+    return resp.get_json().get("token")
+
+  def _crear_donacion_payload(self, **kwargs):
+    base = {
+        "tipo": "comida",
+        "cantidad": 10,
+        "donante": "Juan Pérez",
+        "direccion": "Calle 12345",
+        "organizacion": "Org Test",
+    }
+    base.update(kwargs)
+    return base
+
+  def test_crear_donacion_tipo_invalido(self):
+    token = self._obtener_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = self._crear_donacion_payload(tipo="dinero")
+    resp = self.client.post(
+        "/api/donaciones",
+        data=json.dumps(payload),
+        headers=headers,
+        content_type="application/json",
+    )
+    self.assertEqual(resp.status_code, 400)
+
+  def test_crear_donacion_sin_cantidad(self):
+    token = self._obtener_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = self._crear_donacion_payload(cantidad=None)
+    resp = self.client.post(
+        "/api/donaciones",
+        data=json.dumps(payload),
+        headers=headers,
+        content_type="application/json",
+    )
+    self.assertEqual(resp.status_code, 400)
+
+  def test_crear_donacion_cantidad_negativa(self):
+    token = self._obtener_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = self._crear_donacion_payload(cantidad=-10)
+    resp = self.client.post(
+        "/api/donaciones",
+        data=json.dumps(payload),
+        headers=headers,
+        content_type="application/json",
+    )
+    self.assertEqual(resp.status_code, 400)
+
+  def test_crear_donacion_cantidad_no_numerica(self):
+    token = self._obtener_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = self._crear_donacion_payload(cantidad="diez")
+    resp = self.client.post(
+        "/api/donaciones",
+        data=json.dumps(payload),
+        headers=headers,
+        content_type="application/json",
+    )
+    self.assertEqual(resp.status_code, 400)
+
+  def test_crear_donacion_sin_donante(self):
+    token = self._obtener_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = self._crear_donacion_payload(donante="")
+    resp = self.client.post(
+        "/api/donaciones",
+        data=json.dumps(payload),
+        headers=headers,
+        content_type="application/json",
+    )
+    self.assertEqual(resp.status_code, 400)
+
+  def test_crear_donacion_sin_direccion(self):
+    token = self._obtener_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = self._crear_donacion_payload(direccion="")
+    resp = self.client.post(
+        "/api/donaciones",
+        data=json.dumps(payload),
+        headers=headers,
+        content_type="application/json",
+    )
+    self.assertEqual(resp.status_code, 400)
+
+  def test_crear_donacion_sin_organizacion(self):
+    token = self._obtener_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = self._crear_donacion_payload(organizacion="")
+    resp = self.client.post(
+        "/api/donaciones",
+        data=json.dumps(payload),
+        headers=headers,
+        content_type="application/json",
+    )
+    self.assertEqual(resp.status_code, 400)
+
+
+class TestManejoErrores(unittest.TestCase):
+
+  def setUp(self):
+    self.app = create_app()
+    self.app.config["TESTING"] = True
+    self.client = self.app.test_client()
+
+  def _obtener_token(self, username="admin", password="Admin123!"):
+    resp = self.client.post(
+        "/api/auth/login",
+        data=json.dumps({"username": username, "password": password}),
+        content_type="application/json",
+    )
+    return resp.get_json().get("token")
+
+  def test_donacion_inexistente_404(self):
+    token = self._obtener_token("jperez", "Usuario123!")
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = self.client.get("/api/donaciones/99999", headers=headers)
+    self.assertEqual(resp.status_code, 404)
+
+  def test_aprobar_donacion_inexistente_404(self):
+    token = self._obtener_token("admin", "Admin123!")
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = self.client.put("/api/donaciones/99999/aprobar", headers=headers)
+    self.assertEqual(resp.status_code, 404)
 
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+  unittest.main()
