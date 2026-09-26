@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Manos que Ayudan — Módulo de Donaciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --verde-900:#173327;
+    --verde-700:#1F4B3F;
+    --verde-500:#2E6B57;
+    --oro-500:#D9A441;
+    --oro-600:#BE8A2E;
+    --papel:#F4F6F2;
+    --papel-card:#FFFFFF;
+    --linea:#DDE3DC;
+    --texto:#20241F;
+    --texto-suave:#5B655B;
+    --rojo:#B3413A;
+    --rojo-bg:#FBEAE8;
+    --ambar-bg:#FCF1DA;
+    --verde-bg:#E7F1EA;
+    --radio:10px;
+    --sombra:0 1px 2px rgba(23,51,39,.06), 0 8px 24px -12px rgba(23,51,39,.18);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--papel);
+    color:var(--texto);
+    font-family:"Inter",system-ui,-apple-system,Segoe UI,sans-serif;
+    line-height:1.45;
+    min-height:100vh;
+  }
+  h1,h2,h3{
+    font-family:"Fraunces",Georgia,serif;
+    font-weight:600;
+    margin:0 0 4px 0;
+    color:var(--verde-900);
+    letter-spacing:-0.01em;
+  }
+  .oculto{display:none !important;}
+
+  /* ---------- Pantalla de login ---------- */
+  #vista-login{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    background:
+      radial-gradient(1200px 500px at 15% -10%, rgba(217,164,65,.14), transparent 60%),
+      radial-gradient(900px 500px at 100% 110%, rgba(31,75,63,.12), transparent 60%),
+      var(--papel);
+  }
+  .tarjeta-login{
+    width:100%;
+    max-width:380px;
+    background:var(--papel-card);
+    border:1px solid var(--linea);
+    border-radius:14px;
+    padding:36px 32px 30px;
+    box-shadow:var(--sombra);
+  }
+  .marca{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:22px;
+  }
+  .marca .icono{
+    width:38px;height:38px;border-radius:10px;
+    background:var(--verde-700);
+    display:flex;align-items:center;justify-content:center;
+    font-size:19px;
+    flex:none;
+  }
+  .marca .nombre{font-size:14px;color:var(--texto-suave);font-weight:500;}
+  .tarjeta-login h1{font-size:22px;margin-bottom:2px;}
+  .subtitulo{color:var(--texto-suave);font-size:14px;margin-bottom:22px;}
+
+  label{
+    display:block;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--verde-900);
+    margin-bottom:6px;
+    margin-top:16px;
+  }
+  label:first-of-type{margin-top:0;}
+  input,select,textarea{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--linea);
+    border-radius:8px;
+    font-size:14px;
+    font-family:inherit;
+    color:var(--texto);
+    background:#fff;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  input:focus,select:focus,textarea:focus{
+    outline:none;
+    border-color:var(--verde-500);
+    box-shadow:0 0 0 3px rgba(46,107,87,.15);
+  }
+  textarea{resize:vertical;min-height:64px;}
+
+  button{
+    font-family:inherit;
+    cursor:pointer;
+    border:none;
+  }
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    padding:10px 18px;
+    border-radius:8px;
+    font-size:14px;
+    font-weight:600;
+    transition:filter .15s ease, transform .05s ease;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn-primario{background:var(--verde-700);color:#fff;}
+  .btn-primario:hover{filter:brightness(1.08);}
+  .btn-oro{background:var(--oro-500);color:var(--verde-900);}
+  .btn-oro:hover{filter:brightness(1.05);}
+  .btn-rojo{background:var(--rojo-bg);color:var(--rojo);}
+  .btn-rojo:hover{filter:brightness(0.97);}
+  .btn-fantasma{background:transparent;color:var(--texto-suave);border:1px solid var(--linea);}
+  .btn-fantasma:hover{background:#fff;}
+  .btn-block{width:100%;margin-top:22px;padding:11px;}
+  .btn-sm{padding:6px 12px;font-size:12.5px;border-radius:6px;}
+
+  .error-msg{
+    margin-top:14px;
+    background:var(--rojo-bg);
+    color:var(--rojo);
+    border-radius:8px;
+    padding:10px 12px;
+    font-size:13px;
+    font-weight:500;
+  }
+  .ayuda-credenciales{
+    margin-top:20px;
+    padding-top:16px;
+    border-top:1px dashed var(--linea);
+    font-size:12px;
+    color:var(--texto-suave);
+  }
+  .ayuda-credenciales code{
+    background:var(--papel);
+    padding:1px 5px;
+    border-radius:4px;
+    font-size:11.5px;
+  }
+
+  /* ---------- App principal ---------- */
+  #vista-app{min-height:100vh;}
+  header.barra{
+    background:var(--verde-900);
+    color:#fff;
+    padding:14px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  header.barra .marca-app{display:flex;align-items:center;gap:10px;}
+  header.barra .marca-app .icono{
+    width:34px;height:34px;border-radius:9px;background:var(--oro-500);
+    display:flex;align-items:center;justify-content:center;font-size:17px;
+  }
+  header.barra .marca-app .titulo{font-family:"Fraunces",serif;font-size:17px;font-weight:600;}
+  .cuenta{display:flex;align-items:center;gap:12px;}
+  .cuenta .info{text-align:right;font-size:13px;line-height:1.3;}
+  .cuenta .info .nombre-usuario{font-weight:600;}
+  .badge-rol{
+    display:inline-block;
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:.02em;
+    padding:2px 8px;
+    border-radius:20px;
+    margin-top:2px;
+  }
+  .badge-rol.usuario{background:rgba(217,164,65,.25);color:#F4D9A0;}
+  .badge-rol.administrador{background:rgba(255,255,255,.18);color:#fff;}
+
+  main{
+    max-width:1040px;
+    margin:0 auto;
+    padding:28px 20px 60px;
+  }
+  .franja-bienvenida{margin-bottom:22px;}
+  .franja-bienvenida p{color:var(--texto-suave);font-size:14.5px;margin:4px 0 0;}
+
+  .banner-exito{
+    background:var(--verde-bg);
+    border:1px solid rgba(46,107,87,.25);
+    color:var(--verde-900);
+    border-radius:12px;
+    padding:16px 18px;
+    margin-bottom:22px;
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+  }
+  .banner-exito .emoji{font-size:22px;line-height:1;}
+  .banner-exito strong{display:block;font-size:15px;margin-bottom:2px;}
+  .banner-exito span{font-size:13.5px;color:var(--verde-700);}
+  .banner-exito .cerrar{
+    margin-left:auto;background:none;color:var(--verde-700);font-size:16px;padding:0 4px;
+  }
+
+  .rejilla{
+    display:grid;
+    grid-template-columns:minmax(260px,340px) 1fr;
+    gap:22px;
+    align-items:start;
+  }
+  @media (max-width:820px){
+    .rejilla{grid-template-columns:1fr;}
+  }
+
+  .panel{
+    background:var(--papel-card);
+    border:1px solid var(--linea);
+    border-radius:12px;
+    padding:20px 20px 22px;
+    box-shadow:var(--sombra);
+  }
+  .panel h2{font-size:16px;margin-bottom:2px;}
+  .panel .subt{font-size:12.5px;color:var(--texto-suave);margin-bottom:14px;}
+
+  .fila-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  .tarjetas-resumen{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+    gap:12px;
+    margin-bottom:20px;
+  }
+  .tarjeta-resumen{
+    background:var(--papel-card);
+    border:1px solid var(--linea);
+    border-radius:12px;
+    padding:14px 16px;
+    box-shadow:var(--sombra);
+  }
+  .tarjeta-resumen .num{font-family:"Fraunces",serif;font-size:26px;color:var(--verde-900);font-weight:600;}
+  .tarjeta-resumen .lbl{font-size:12px;color:var(--texto-suave);margin-top:2px;}
+
+  .lista-donaciones{display:flex;flex-direction:column;gap:10px;}
+  .item-donacion{
+    border:1px solid var(--linea);
+    border-radius:10px;
+    padding:12px 14px;
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    align-items:flex-start;
+    flex-wrap:wrap;
+  }
+  .item-donacion .icono-tipo{
+    width:34px;height:34px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;flex:none;
+  }
+  .icono-tipo.comida{background:var(--ambar-bg);}
+  .icono-tipo.ropa{background:var(--verde-bg);}
+  .cuerpo-item{display:flex;gap:10px;flex:1;min-width:200px;}
+  .detalle-item .titulo-item{font-weight:600;font-size:14px;}
+  .detalle-item .meta-item{font-size:12.5px;color:var(--texto-suave);margin-top:2px;}
+  .detalle-item .meta-item b{color:var(--texto);}
+
+  .estado{
+    font-size:11px;
+    font-weight:700;
+    padding:3px 10px;
+    border-radius:20px;
+    white-space:nowrap;
+  }
+  .estado.pendiente{background:var(--ambar-bg);color:var(--oro-600);}
+  .estado.aprobada{background:var(--verde-bg);color:var(--verde-700);}
+  .estado.rechazada{background:var(--rojo-bg);color:var(--rojo);}
+
+  .acciones-item{display:flex;gap:6px;flex-wrap:wrap;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{
+    text-align:left;
+    font-size:11px;
+    text-transform:none;
+    color:var(--texto-suave);
+    border-bottom:1px solid var(--linea);
+    padding:0 10px 8px;
+    font-weight:600;
+  }
+  tbody td{
+    padding:10px;
+    border-bottom:1px solid var(--linea);
+    vertical-align:top;
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  .tabla-scroll{overflow-x:auto;}
+
+  .vacio{
+    text-align:center;
+    padding:26px 10px;
+    color:var(--texto-suave);
+    font-size:13.5px;
+  }
+  .cargando{padding:16px;color:var(--texto-suave);font-size:13px;}
+</style>
+</head>
+<body>
+
+<!-- ======================= VISTA: LOGIN ======================= -->
+<div id="vista-login">
+  <div class="tarjeta-login">
+    <div class="marca">
+      <div class="icono">🌾</div>
+      <div class="nombre">Manos que Ayudan</div>
+    </div>
+    <h1>Inicia sesión</h1>
+    <p class="subtitulo">Módulo de donaciones — comida y ropa</p>
+
+    <form id="form-login">
+      <label for="login-usuario">Usuario</label>
+      <input id="login-usuario" name="username" autocomplete="username" required />
+
+      <label for="login-password">Contraseña</label>
+      <input id="login-password" name="password" type="password" autocomplete="current-password" required />
+
+      <button type="submit" class="btn btn-primario btn-block" id="btn-login">Entrar</button>
+    </form>
+
+    <div id="login-error" class="error-msg oculto"></div>
+
+    <div class="ayuda-credenciales">
+      Usuarios de prueba:<br/>
+      Administrador → <code>admin</code> / <code>Admin123!</code><br/>
+      Usuario → <code>jperez</code> / <code>Usuario123!</code>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= VISTA: APP (tras login) ======================= -->
+<div id="vista-app" class="oculto">
+  <header class="barra">
+    <div class="marca-app">
+      <div class="icono">🌾</div>
+      <div class="titulo">Manos que Ayudan</div>
+    </div>
+    <div class="cuenta">
+      <div class="info">
+        <div class="nombre-usuario" id="txt-nombre-usuario">—</div>
+        <span class="badge-rol" id="txt-rol-usuario">—</span>
+      </div>
+      <button class="btn btn-fantasma btn-sm" id="btn-logout">Salir</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="franja-bienvenida">
+      <h2 id="titulo-panel">Panel de donaciones</h2>
+      <p id="subtitulo-panel">Registra y da seguimiento a las donaciones.</p>
+    </div>
+
+    <div id="banner-exito" class="banner-exito oculto">
+      <div class="emoji">🎉</div>
+      <div style="flex:1">
+        <strong>¡Felicidades, donación registrada!</strong>
+        <span>Gracias por tu generosidad: esta donación ayudará a muchas personas.</span>
+      </div>
+      <button class="cerrar" id="cerrar-banner">✕</button>
+    </div>
+
+    <!-- Tarjetas de resumen: SOLO ADMINISTRADOR -->
+    <div id="bloque-resumen" class="oculto">
+      <div class="tarjetas-resumen" id="tarjetas-resumen"></div>
+    </div>
+
+    <div class="rejilla">
+      <!-- Columna izquierda: formulario nueva donación (Usuario y Administrador) -->
+      <section class="panel">
+        <h2>Nueva donación</h2>
+        <p class="subt">Solo se piden los datos necesarios para gestionarla.</p>
+
+        <form id="form-donacion">
+          <label for="don-tipo">Tipo de donación</label>
+          <select id="don-tipo" required>
+            <option value="" disabled selected>Selecciona una opción</option>
+            <option value="comida">🍚 Comida</option>
+            <option value="ropa">👕 Ropa</option>
+          </select>
+
+          <div class="fila-2">
+            <div>
+              <label for="don-cantidad">Cantidad <span id="lbl-unidad" style="font-weight:400;color:var(--texto-suave)"></span></label>
+              <input id="don-cantidad" type="number" min="1" step="1" placeholder="Ej. 10" required />
+            </div>
+            <div>
+              <label for="don-donante">Nombre del donante</label>
+              <input id="don-donante" placeholder="Tu nombre" required />
+            </div>
+          </div>
+
+          <label for="don-organizacion">Organización beneficiaria</label>
+          <input id="don-organizacion" placeholder="Ej. Comedor Comunitario Esperanza" required />
+
+          <label for="don-direccion">Dirección de recolección/entrega</label>
+          <input id="don-direccion" placeholder="Calle, número, colonia, ciudad" required />
+
+          <label for="don-descripcion">Descripción (opcional)</label>
+          <textarea id="don-descripcion" placeholder="Ej. Ropa de invierno para niños de 4 a 8 años"></textarea>
+
+          <button type="submit" class="btn btn-oro btn-block" id="btn-crear-donacion">Registrar donación</button>
+        </form>
+
+        <div id="donacion-error" class="error-msg oculto"></div>
+      </section>
+
+      <!-- Columna derecha: listado -->
+      <section class="panel">
+        <h2 id="titulo-lista">Mis donaciones</h2>
+        <p class="subt" id="subt-lista">Donaciones que has registrado.</p>
+
+        <!-- Vista de tarjetas: Usuario -->
+        <div id="lista-usuario" class="lista-donaciones"></div>
+
+        <!-- Vista de tabla: Administrador -->
+        <div id="lista-admin" class="oculto tabla-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Cantidad</th>
+                <th>Donante</th>
+                <th>Organización</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-admin-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const estado = {
+    token: null,
+    usuario: null, // {id, username, rol, nombre}
+  };
+
+  // ---------- Utilidades ----------
+  function el(id){ return document.getElementById(id); }
+
+  function mostrar(id){ el(id).classList.remove("oculto"); }
+  function ocultar(id){ el(id).classList.add("oculto"); }
+
+  async function api(path, options={}){
+    const headers = Object.assign({ "Content-Type": "application/json" }, options.headers || {});
+    if (estado.token) headers["Authorization"] = "Bearer " + estado.token;
+
+    const resp = await fetch(path, Object.assign({}, options, { headers }));
+    let data = null;
+    try { data = await resp.json(); } catch(e) { data = null; }
+
+    if (!resp.ok) {
+      const mensaje = (data && (data.error || data.mensaje)) || ("Error HTTP " + resp.status);
+      const err = new Error(mensaje);
+      err.detalles = data && data.detalles;
+      err.status = resp.status;
+      throw err;
+    }
+    return data;
+  }
+
+  function formatearErrorDetalles(err){
+    if (err.detalles && typeof err.detalles === "object") {
+      const partes = Object.values(err.detalles);
+      if (partes.length) return partes.join(" · ");
+    }
+    return err.message;
+  }
+
+  const ICONOS_TIPO = { comida: "🍚", ropa: "👕" };
+  const UNIDAD_TIPO = { comida: "paquetes", ropa: "piezas" };
+  const NOMBRE_TIPO = { comida: "Comida", ropa: "Ropa" };
+
+  function formatearFecha(iso){
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return d.toLocaleDateString("es-MX", { day:"2-digit", month:"short", year:"numeric" });
+  }
+
+  // ---------- Login ----------
+  el("form-login").addEventListener("submit", async function(ev){
+    ev.preventDefault();
+    ocultar("login-error");
+    const username = el("login-usuario").value.trim();
+    const password = el("login-password").value;
+    const boton = el("btn-login");
+    boton.disabled = true;
+    boton.textContent = "Entrando...";
+
+    try {
+      const data = await api("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ username, password })
+      });
+      estado.token = data.token;
+      estado.usuario = data.usuario;
+      entrarApp();
+    } catch(err) {
+      el("login-error").textContent = err.message;
+      mostrar("login-error");
+    } finally {
+      boton.disabled = false;
+      boton.textContent = "Entrar";
+    }
+  });
+
+  el("btn-logout").addEventListener("click", function(){
+    estado.token = null;
+    estado.usuario = null;
+    el("form-login").reset();
+    ocultar("vista-app");
+    mostrar("vista-login");
+  });
+
+  el("cerrar-banner").addEventListener("click", function(){
+    ocultar("banner-exito");
+  });
+
+  // ---------- Entrar a la app según rol ----------
+  function entrarApp(){
+    ocultar("vista-login");
+    mostrar("vista-app");
+
+    el("txt-nombre-usuario").textContent = estado.usuario.nombre;
+    const badge = el("txt-rol-usuario");
+    const esAdmin = estado.usuario.rol === "administrador";
+    badge.textContent = esAdmin ? "Administrador" : "Usuario";
+    badge.className = "badge-rol " + estado.usuario.rol;
+
+    el("don-donante").value = estado.usuario.nombre;
+
+    if (esAdmin) {
+      el("titulo-panel").textContent = "Panel de administración";
+      el("subtitulo-panel").textContent = "Da seguimiento, aprueba o rechaza las donaciones registradas.";
+      el("titulo-lista").textContent = "Todas las donaciones";
+      el("subt-lista").textContent = "De todos los usuarios del sistema.";
+      mostrar("bloque-resumen");
+      mostrar("lista-admin");
+      ocultar("lista-usuario");
+      cargarReporte();
+    } else {
+      el("titulo-panel").textContent = "Mi panel de donaciones";
+      el("subtitulo-panel").textContent = "Registra una donación y consulta su estado.";
+      el("titulo-lista").textContent = "Mis donaciones";
+      el("subt-lista").textContent = "Donaciones que has registrado.";
+      ocultar("bloque-resumen");
+      ocultar("lista-admin");
+      mostrar("lista-usuario");
+    }
+
+    cargarDonaciones();
+  }
+
+  // ---------- Tipo de donación: actualizar unidad mostrada ----------
+  el("don-tipo").addEventListener("change", function(){
+    const tipo = this.value;
+    el("lbl-unidad").textContent = tipo ? ("(" + UNIDAD_TIPO[tipo] + ")") : "";
+  });
+
+  // ---------- Crear donación ----------
+  el("form-donacion").addEventListener("submit", async function(ev){
+    ev.preventDefault();
+    ocultar("donacion-error");
+    ocultar("banner-exito");
+
+    const cuerpo = {
+      tipo: el("don-tipo").value,
+      cantidad: el("don-cantidad").value,
+      donante: el("don-donante").value.trim(),
+      organizacion: el("don-organizacion").value.trim(),
+      direccion: el("don-direccion").value.trim(),
+      descripcion: el("don-descripcion").value.trim(),
+    };
+
+    const boton = el("btn-crear-donacion");
+    boton.disabled = true;
+    boton.textContent = "Registrando...";
+
+    try {
+      await api("/api/donaciones", { method: "POST", body: JSON.stringify(cuerpo) });
+
+      mostrar("banner-exito");
+      el("don-tipo").value = "";
+      el("lbl-unidad").textContent = "";
+      el("don-cantidad").value = "";
+      el("don-organizacion").value = "";
+      el("don-direccion").value = "";
+      el("don-descripcion").value = "";
+
+      cargarDonaciones();
+      if (estado.usuario.rol === "administrador") cargarReporte();
+    } catch(err) {
+      el("donacion-error").textContent = formatearErrorDetalles(err);
+      mostrar("donacion-error");
+    } finally {
+      boton.disabled = false;
+      boton.textContent = "Registrar donación";
+    }
+  });
+
+  // ---------- Cargar reporte (solo admin) ----------
+  async function cargarReporte(){
+    try {
+      const r = await api("/api/donaciones/reporte");
+      const cont = el("tarjetas-resumen");
+      const aprobadasComida = r.resumen_por_tipo.comida.total_unidades;
+      const aprobadasRopa = r.resumen_por_tipo.ropa.total_unidades;
+      cont.innerHTML = `
+        <div class="tarjeta-resumen"><div class="num">${r.total_donaciones}</div><div class="lbl">Total registradas</div></div>
+        <div class="tarjeta-resumen"><div class="num">${r.pendientes}</div><div class="lbl">Pendientes</div></div>
+        <div class="tarjeta-resumen"><div class="num">${r.aprobadas}</div><div class="lbl">Aprobadas</div></div>
+        <div class="tarjeta-resumen"><div class="num">${r.rechazadas}</div><div class="lbl">Rechazadas</div></div>
+        <div class="tarjeta-resumen"><div class="num">${aprobadasComida}</div><div class="lbl">Paquetes de comida entregados</div></div>
+        <div class="tarjeta-resumen"><div class="num">${aprobadasRopa}</div><div class="lbl">Piezas de ropa entregadas</div></div>
+      `;
+    } catch(err) {
+      el("tarjetas-resumen").innerHTML = `<div class="vacio">No se pudo cargar el reporte: ${err.message}</div>`;
+    }
+  }
+
+  // ---------- Cargar donaciones (usuario o admin) ----------
+  async function cargarDonaciones(){
+    const esAdmin = estado.usuario.rol === "administrador";
+    const destino = esAdmin ? el("tabla-admin-body") : el("lista-usuario");
+    destino.innerHTML = esAdmin ? "" : '<div class="cargando">Cargando…</div>';
+
+    try {
+      const donaciones = await api("/api/donaciones");
+
+      if (esAdmin) {
+        renderTablaAdmin(donaciones);
+      } else {
+        renderListaUsuario(donaciones);
+      }
+    } catch(err) {
+      destino.innerHTML = `<div class="vacio">No se pudieron cargar las donaciones: ${err.message}</div>`;
+    }
+  }
+
+  function renderListaUsuario(donaciones){
+    const cont = el("lista-usuario");
+    if (!donaciones.length) {
+      cont.innerHTML = '<div class="vacio">Todavía no has registrado donaciones.<br/>Usa el formulario para registrar la primera.</div>';
+      return;
+    }
+    cont.innerHTML = donaciones.map(function(d){
+      return `
+        <div class="item-donacion">
+          <div class="cuerpo-item">
+            <div class="icono-tipo ${d.tipo}">${ICONOS_TIPO[d.tipo]}</div>
+            <div class="detalle-item">
+              <div class="titulo-item">${NOMBRE_TIPO[d.tipo]} · ${d.cantidad} ${UNIDAD_TIPO[d.tipo]}</div>
+              <div class="meta-item">Para: <b>${escapeHtml(d.organizacion)}</b></div>
+              <div class="meta-item">${formatearFecha(d.fecha_creacion)}</div>
+            </div>
+          </div>
+          <span class="estado ${d.estado}">${capitalizar(d.estado)}</span>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function renderTablaAdmin(donaciones){
+    const cuerpo = el("tabla-admin-body");
+    if (!donaciones.length) {
+      cuerpo.innerHTML = '<tr><td colspan="6"><div class="vacio">Todavía no hay donaciones registradas.</div></td></tr>';
+      return;
+    }
+    cuerpo.innerHTML = donaciones.map(function(d){
+      const acciones = d.estado === "pendiente"
+        ? `
+          <button class="btn btn-primario btn-sm" data-accion="aprobar" data-id="${d.id}">Aprobar</button>
+          <button class="btn btn-rojo btn-sm" data-accion="rechazar" data-id="${d.id}">Rechazar</button>
+        `
+        : "";
+      return `
+        <tr>
+          <td>${ICONOS_TIPO[d.tipo]} ${NOMBRE_TIPO[d.tipo]}</td>
+          <td>${d.cantidad} ${UNIDAD_TIPO[d.tipo]}</td>
+          <td>${escapeHtml(d.donante)}</td>
+          <td>${escapeHtml(d.organizacion)}</td>
+          <td><span class="estado ${d.estado}">${capitalizar(d.estado)}</span></td>
+          <td>
+            <div class="acciones-item">
+              ${acciones}
+              <button class="btn btn-fantasma btn-sm" data-accion="eliminar" data-id="${d.id}">Eliminar</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  // Delegación de eventos para acciones de administrador
+  el("tabla-admin-body").addEventListener("click", async function(ev){
+    const btn = ev.target.closest("button[data-accion]");
+    if (!btn) return;
+    const id = btn.getAttribute("data-id");
+    const accion = btn.getAttribute("data-accion");
+
+    const rutas = {
+      aprobar: { url: `/api/donaciones/${id}/aprobar`, metodo: "PUT" },
+      rechazar: { url: `/api/donaciones/${id}/rechazar`, metodo: "PUT" },
+      eliminar: { url: `/api/donaciones/${id}`, metodo: "DELETE" },
+    };
+    const conf = rutas[accion];
+    if (!conf) return;
+
+    if (accion === "eliminar" && !confirm("¿Eliminar esta donación? Esta acción no se puede deshacer.")) return;
+
+    btn.disabled = true;
+    try {
+      await api(conf.url, { method: conf.metodo });
+      cargarDonaciones();
+      cargarReporte();
+    } catch(err) {
+      alert("No se pudo completar la acción: " + err.message);
+      btn.disabled = false;
+    }
+  });
+
+  function escapeHtml(str){
+    return String(str)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
+  function capitalizar(str){
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+})();
+</script>
+</body>
+</html>

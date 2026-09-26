@@ -1,0 +1,33 @@
+test_login_credenciales_invalidas (tests.test_donaciones.TestAutenticacion.test_login_credenciales_invalidas) ... ok
+test_login_exitoso_admin (tests.test_donaciones.TestAutenticacion.test_login_exitoso_admin) ... ok
+test_login_exitoso_usuario (tests.test_donaciones.TestAutenticacion.test_login_exitoso_usuario) ... ok
+test_login_sin_datos (tests.test_donaciones.TestAutenticacion.test_login_sin_datos) ... ok
+test_login_usuario_inexistente (tests.test_donaciones.TestAutenticacion.test_login_usuario_inexistente) ... ok
+test_aprobar_donacion_inexistente_404 (tests.test_donaciones.TestManejoErrores.test_aprobar_donacion_inexistente_404) ... ok
+test_donacion_inexistente_404 (tests.test_donaciones.TestManejoErrores.test_donacion_inexistente_404) ... ok
+test_admin_puede_aprobar_donacion (tests.test_donaciones.TestPermisosAdministrador.test_admin_puede_aprobar_donacion) ... ok
+test_admin_puede_eliminar_donacion (tests.test_donaciones.TestPermisosAdministrador.test_admin_puede_eliminar_donacion) ... ok
+test_admin_puede_rechazar_donacion (tests.test_donaciones.TestPermisosAdministrador.test_admin_puede_rechazar_donacion) ... ok
+test_admin_puede_ver_reporte (tests.test_donaciones.TestPermisosAdministrador.test_admin_puede_ver_reporte) ... ok
+test_admin_ve_todas_las_donaciones (tests.test_donaciones.TestPermisosAdministrador.test_admin_ve_todas_las_donaciones) ... ok
+test_usuario_no_puede_aprobar_donacion (tests.test_donaciones.TestPermisosUsuario.test_usuario_no_puede_aprobar_donacion) ... ok
+test_usuario_no_puede_eliminar_donacion (tests.test_donaciones.TestPermisosUsuario.test_usuario_no_puede_eliminar_donacion) ... ok
+test_usuario_no_puede_ver_reporte (tests.test_donaciones.TestPermisosUsuario.test_usuario_no_puede_ver_reporte) ... ok
+test_usuario_puede_crear_donacion_comida (tests.test_donaciones.TestPermisosUsuario.test_usuario_puede_crear_donacion_comida) ... ok
+test_usuario_puede_crear_donacion_ropa (tests.test_donaciones.TestPermisosUsuario.test_usuario_puede_crear_donacion_ropa) ... ok
+test_usuario_solo_ve_sus_propias_donaciones (tests.test_donaciones.TestPermisosUsuario.test_usuario_solo_ve_sus_propias_donaciones) ... ok
+test_acceso_con_token_valido (tests.test_donaciones.TestSeguridadJWT.test_acceso_con_token_valido) ... ok
+test_acceso_sin_token (tests.test_donaciones.TestSeguridadJWT.test_acceso_sin_token) ... ok
+test_acceso_token_invalido (tests.test_donaciones.TestSeguridadJWT.test_acceso_token_invalido) ... ok
+test_crear_donacion_cantidad_negativa (tests.test_donaciones.TestValidacionDatos.test_crear_donacion_cantidad_negativa) ... ok
+test_crear_donacion_cantidad_no_numerica (tests.test_donaciones.TestValidacionDatos.test_crear_donacion_cantidad_no_numerica) ... ok
+test_crear_donacion_sin_cantidad (tests.test_donaciones.TestValidacionDatos.test_crear_donacion_sin_cantidad) ... ok
+test_crear_donacion_sin_direccion (tests.test_donaciones.TestValidacionDatos.test_crear_donacion_sin_direccion) ... ok
+test_crear_donacion_sin_donante (tests.test_donaciones.TestValidacionDatos.test_crear_donacion_sin_donante) ... ok
+test_crear_donacion_sin_organizacion (tests.test_donaciones.TestValidacionDatos.test_crear_donacion_sin_organizacion) ... ok
+test_crear_donacion_tipo_invalido (tests.test_donaciones.TestValidacionDatos.test_crear_donacion_tipo_invalido) ... ok
+
+----------------------------------------------------------------------
+Ran 28 tests in 14.266s
+
+OK

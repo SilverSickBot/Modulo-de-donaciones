@@ -1,0 +1,160 @@
+==========================================================
+0) INTERFAZ GRAFICA DISPONIBLE
+==========================================================
+GET /app -> debe devolver HTML
+HTTP_STATUS: 200
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Manos que Ayudan — Módulo de Donaciones</title>
+<link 
+
+==========================================================
+1) LOGIN - ADMINISTRADOR
+==========================================================
+{
+    "mensaje": "Autenticaci\u00f3n exitosa",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInVzZXJuYW1lIjoiYWRtaW4iLCJyb2wiOiJhZG1pbmlzdHJhZG9yIiwiaWF0IjoxNzkwNDQ2ODUxLCJleHAiOjE3OTA0NTA0NTF9.AkXwYOwkmx0AU6igZ3-G3amZjfaQqat8ETLo-Pjd510",
+    "usuario": {
+        "id": 1,
+        "nombre": "Administrador General",
+        "rol": "administrador",
+        "username": "admin"
+    }
+}
+
+==========================================================
+2) LOGIN - USUARIO
+==========================================================
+{
+    "mensaje": "Autenticaci\u00f3n exitosa",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsInVzZXJuYW1lIjoianBlcmV6Iiwicm9sIjoidXN1YXJpbyIsImlhdCI6MTc5MDQ0Njg1MSwiZXhwIjoxNzkwNDUwNDUxfQ.GUMA0i7TAEEdwy3NDkG3409idJN-DjMfif6azyThzGE",
+    "usuario": {
+        "id": 2,
+        "nombre": "Juan P\u00e9rez",
+        "rol": "usuario",
+        "username": "jperez"
+    }
+}
+
+==========================================================
+3) JWT decodificado
+==========================================================
+admin -> {'sub': 1, 'username': 'admin', 'rol': 'administrador', 'iat': 1790446851, 'exp': 1790450451}
+usuario -> {'sub': 2, 'username': 'jperez', 'rol': 'usuario', 'iat': 1790446851, 'exp': 1790450451}
+
+==========================================================
+4) USUARIO crea donacion de COMIDA (accion permitida)
+==========================================================
+{
+    "cantidad": 15.0,
+    "descripcion": "Arroz y frijol",
+    "direccion": "Av. Reforma 123, CDMX",
+    "donante": "Juan Perez",
+    "estado": "pendiente",
+    "fecha_actualizacion": null,
+    "fecha_creacion": "2026-09-26T18:20:52.154068+00:00",
+    "id": 1,
+    "organizacion": "Comedor Comunitario Esperanza",
+    "tipo": "comida",
+    "usuario_id": 2
+}
+
+==========================================================
+5) USUARIO crea donacion de ROPA (accion permitida)
+==========================================================
+{
+    "cantidad": 25.0,
+    "descripcion": "Ropa de invierno",
+    "direccion": "Calle Hidalgo 45, Monterrey",
+    "donante": "Juan Perez",
+    "estado": "pendiente",
+    "fecha_actualizacion": null,
+    "fecha_creacion": "2026-09-26T18:20:52.213306+00:00",
+    "id": 2,
+    "organizacion": "Fundacion Abrigo",
+    "tipo": "ropa",
+    "usuario_id": 2
+}
+
+==========================================================
+6) USUARIO intenta APROBAR (accion exclusiva admin) -> 403
+==========================================================
+{"code":"FORBIDDEN","error":"No tiene permisos para realizar esta acci\u00f3n","rol_actual":"usuario","rol_requerido":["administrador"]}
+
+HTTP_STATUS: 403
+
+==========================================================
+7) ADMIN aprueba donacion de comida (accion exclusiva) -> 200
+==========================================================
+{"cantidad":15.0,"descripcion":"Arroz y frijol","direccion":"Av. Reforma 123, CDMX","donante":"Juan Perez","estado":"aprobada","fecha_actualizacion":"2026-09-26T18:20:52.279622+00:00","fecha_creacion":"2026-09-26T18:20:52.154068+00:00","id":1,"organizacion":"Comedor Comunitario Esperanza","tipo":"comida","usuario_id":2}
+
+HTTP_STATUS: 200
+
+==========================================================
+8) ADMIN aprueba donacion de ropa -> 200
+==========================================================
+{"cantidad":25.0,"descripcion":"Ropa de invierno","direccion":"Calle Hidalgo 45, Monterrey","donante":"Juan Perez","estado":"aprobada","fecha_actualizacion":"2026-09-26T18:20:52.285003+00:00","fecha_creacion":"2026-09-26T18:20:52.213306+00:00","id":2,"organizacion":"Fundacion Abrigo","tipo":"ropa","usuario_id":2}
+
+HTTP_STATUS: 200
+
+==========================================================
+9) ADMIN consulta reporte (exclusivo) -> 200
+==========================================================
+{
+    "aprobadas": 2,
+    "pendientes": 0,
+    "rechazadas": 0,
+    "resumen_por_tipo": {
+        "comida": {
+            "donaciones_aprobadas": 1,
+            "total_unidades": 15.0
+        },
+        "ropa": {
+            "donaciones_aprobadas": 1,
+            "total_unidades": 25.0
+        }
+    },
+    "total_donaciones": 2
+}
+
+==========================================================
+10) USUARIO consulta 'mis donaciones' (solo ve las suyas)
+==========================================================
+[
+    {
+        "cantidad": 25.0,
+        "descripcion": "Ropa de invierno",
+        "direccion": "Calle Hidalgo 45, Monterrey",
+        "donante": "Juan Perez",
+        "estado": "aprobada",
+        "fecha_actualizacion": "2026-09-26T18:20:52.285003+00:00",
+        "fecha_creacion": "2026-09-26T18:20:52.213306+00:00",
+        "id": 2,
+        "organizacion": "Fundacion Abrigo",
+        "tipo": "ropa",
+        "usuario_id": 2
+    },
+    {
+        "cantidad": 15.0,
+        "descripcion": "Arroz y frijol",
+        "direccion": "Av. Reforma 123, CDMX",
+        "donante": "Juan Perez",
+        "estado": "aprobada",
+        "fecha_actualizacion": "2026-09-26T18:20:52.279622+00:00",
+        "fecha_creacion": "2026-09-26T18:20:52.154068+00:00",
+        "id": 1,
+        "organizacion": "Comedor Comunitario Esperanza",
+        "tipo": "comida",
+        "usuario_id": 2
+    }
+]
+
+==========================================================
+11) VALIDACION: tipo invalido -> 400
+==========================================================
+{"detalles":{"organizacion":"La organizaci\u00f3n beneficiaria es obligatoria (m\u00ednimo 2 caracteres)","tipo":"El tipo debe ser uno de: comida, ropa"},"error":"Datos de donaci\u00f3n inv\u00e1lidos"}
+
+HTTP_STATUS: 400
