@@ -41,8 +41,9 @@ jobs:
           pip install pytest pytest-cov
 
       - name: Ejecutar Pruebas
+        env:
+          PYTHONPATH: donaciones_app
         run: |
-          # Corre las pruebas dentro de la carpeta donaciones_app
           pytest donaciones_app/ --cov=donaciones_app --cov-fail-under=80
 
   # 3. ETAPA: BUILD
