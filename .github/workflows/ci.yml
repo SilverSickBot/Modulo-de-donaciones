@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Pipeline CI/CD Donaciones
 
 on:
   push:
@@ -7,35 +7,71 @@ on:
     branches: [ "main", "master" ]
 
 jobs:
-  test-and-coverage:
-    name: Pruebas Unitarias y Cobertura (>= 80%)
+  # 1. ETAPA: CÓDIGO
+  checkout-codigo:
+    name: 1. Código
     runs-on: ubuntu-latest
-
     steps:
-    - name: Clonar repositorio
-      uses: actions/checkout@v4
+      - name: Descargar fuente del repositorio
+        uses: actions/checkout@v4
 
-    - name: Configurar Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - name: Validar archivos del repositorio
+        run: |
+          echo "Verificando estructura del repositorio..."
+          ls -la
 
-    - name: Instalar dependencias
-      run: |
-        python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        pip install pytest pytest-cov
+  # 2. ETAPA: PRUEBAS Y COBERTURA
+  pruebas-unitarias:
+    name: 2. Pruebas y Cobertura
+    needs: checkout-codigo
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar fuente
+        uses: actions/checkout@v4
 
-    - name: Ejecutar Pruebas y validar 80% de cobertura
-      run: |
-        pytest --cov=. --cov-fail-under=80
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-  deploy-staging:
-    name: Despliegue Automático (Entorno de Pruebas)
-    needs: test-and-coverage
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f donaciones_app/requirements.txt ]; then pip install -r donaciones_app/requirements.txt; fi
+          pip install pytest pytest-cov
+
+      - name: Ejecutar Pruebas
+        run: |
+          # Corre las pruebas dentro de la carpeta donaciones_app
+          pytest donaciones_app/ --cov=donaciones_app --cov-fail-under=80
+
+  # 3. ETAPA: BUILD
+  construccion-build:
+    name: 3. Build (Construcción)
+    needs: pruebas-unitarias
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar fuente
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validar compilación
+        run: |
+          python -m compileall donaciones_app/
+          echo "Construcción del proyecto completada con éxito."
+
+  # 4. ETAPA: DESPLIEGUE
+  despliegue-staging:
+    name: 4. Despliegue
+    needs: construccion-build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-
     steps:
-    - name: Simulación de Despliegue
-      run: echo "¡Pruebas exitosas con 80%+ de cobertura! Desplegando..."
+      - name: Desplegar en Entorno de Pruebas
+        run: |
+          echo "Iniciando despliegue automático..."
+          echo "Módulo de donaciones desplegado correctamente en el entorno de pruebas."
